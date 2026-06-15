@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Us — SpiceGarden Fusion Kitchen</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+
+    /* ── Page Hero ── */
+    .page-hero {
+      background: linear-gradient(135deg, var(--charcoal) 0%, #2c1810 60%, var(--burgundy) 100%);
+      padding: 72px 10% 60px;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-hero::before {
+      content: '✉️';
+      position: absolute;
+      font-size: 18rem;
+      right: 5%;
+      top: -40px;
+      opacity: 0.05;
+      pointer-events: none;
+      line-height: 1;
+    }
+    .page-hero-text { position: relative; z-index: 1; }
+    .page-hero-text h1 { color: var(--white); margin-bottom: 8px; }
+    .page-hero-text p  { color: rgba(255,248,240,0.65); font-size: 1.05rem; max-width: 520px; }
+
+    /* ── Main layout ── */
+    .contact-layout {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 48px;
+      padding: 72px 10%;
+      max-width: 1300px;
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    /* ── Form Card ── */
+    .contact-form-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    .contact-form-header {
+      background: linear-gradient(135deg, var(--charcoal), #2c1810);
+      padding: 32px 36px 28px;
+      border-bottom: 3px solid var(--saffron);
+    }
+    .contact-form-header h2 { color: var(--white); margin-bottom: 6px; font-size: 1.6rem; }
+    .contact-form-header p  { color: rgba(255,248,240,0.6); font-size: 0.88rem; }
+
+    .contact-form-body { padding: 36px; }
+
+    /* Topic selector */
+    .topic-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .topic-btn {
+      padding: 12px 10px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid #e8e0d8;
+      background: var(--cream);
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #777;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      box-shadow: none;
+      transform: none;
+    }
+    .topic-btn:hover     { border-color: var(--turmeric); color: var(--charcoal); transform: none; box-shadow: none; }
+    .topic-btn.selected  { background: var(--gold-mist); border-color: var(--turmeric); color: var(--charcoal); font-weight: 600; }
+
+    /* Field group */
+    .field-group { margin-bottom: 22px; }
+    .field-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+    .field-group label .req { color: var(--saffron); }
+
+    .field-group input,
+    .field-group select,
+    .field-group textarea {
+      width: 100%;
+      border: 1.5px solid #e8e0d8;
+      border-radius: var(--radius-sm);
+      padding: 13px 16px;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      color: var(--charcoal);
+      background: var(--cream);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+    }
+    .field-group input:focus,
+    .field-group select:focus,
+    .field-group textarea:focus {
+      border-color: var(--saffron);
+      box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+      background: var(--white);
+    }
+    .field-group textarea { resize: vertical; min-height: 130px; }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* Character counter */
+    .field-meta {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 5px;
+    }
+    .char-count { font-size: 0.75rem; color: #bbb; }
+
+    /* Rating stars */
+    .rating-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .rating-star {
+      font-size: 1.6rem;
+      cursor: pointer;
+      color: #ddd;
+      transition: color var(--transition), transform var(--transition);
+      background: none;
+      border: none;
+      padding: 0;
+      box-shadow: none;
+      transform: none;
+    }
+    .rating-star:hover,
+    .rating-star.lit { color: var(--turmeric); }
+    .rating-star:hover { transform: scale(1.2); box-shadow: none; }
+    .rating-label { font-size: 0.82rem; color: #aaa; margin-left: 8px; }
+
+    /* Submit */
+    .submit-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .submit-note {
+      font-size: 0.78rem;
+      color: #bbb;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-submit {
+      background: linear-gradient(135deg, var(--saffron), var(--ember));
+      color: var(--white);
+      border: none;
+      padding: 14px 36px;
+      border-radius: 50px;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 4px 18px rgba(255,107,53,0.35);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,107,53,0.45); }
+
+    /* ── Success Toast ── */
+    .success-toast {
+      display: none;
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      text-align: center;
+      border-top: 4px solid #27ae60;
+      box-shadow: var(--shadow-card);
+    }
+    .success-toast.show { display: block; }
+    .toast-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #27ae60, #1e8449);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin: 0 auto 18px;
+      box-shadow: 0 6px 20px rgba(39,174,96,0.3);
+    }
+    .success-toast h3 { margin-bottom: 8px; }
+    .success-toast p  { font-size: 0.9rem; color: #888; line-height: 1.6; }
+
+    /* ── Right Sidebar ── */
+    .contact-sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+    /* Social channels */
+    .social-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    .social-card-header {
+      background: linear-gradient(135deg, var(--charcoal), #2c1810);
+      padding: 16px 24px;
+      border-bottom: 2px solid var(--saffron);
+    }
+    .social-card-header h4 {
+      color: var(--white);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: var(--font-body);
+      font-weight: 600;
+    }
+
+    .social-links { padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+
+    .social-link {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      transition: all var(--transition);
+      color: var(--charcoal);
+    }
+    .social-link:hover { background: var(--gold-mist); transform: translateX(4px); }
+
+    .social-icon-wrap {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+      flex-shrink: 0;
+    }
+
+    .s-email    { background: #fde8c8; color: var(--burgundy); }
+    .s-facebook { background: #e7f0fd; color: #1877f2; }
+    .s-whatsapp { background: #e6f9ee; color: #25d366; }
+    .s-instagram{ background: #fde2f3; color: #e1306c; }
+    .s-phone    { background: #f0f0f0; color: #555; }
+
+    .social-link-text strong { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 2px; }
+    .social-link-text span   { font-size: 0.78rem; color: #999; }
+
+    .social-link-arrow { margin-left: auto; color: #ccc; font-size: 0.8rem; }
+
+    /* Info card (reused from reservation.html style) */
+    .info-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+    .info-card-header {
+      background: linear-gradient(90deg, var(--charcoal), #2c1810);
+      padding: 16px 24px;
+      border-bottom: 2px solid var(--saffron);
+    }
+    .info-card-header h4 {
+      color: var(--white);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: var(--font-body);
+      font-weight: 600;
+    }
+    .info-card-body { padding: 20px 24px; }
+
+    .info-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(244,167,38,0.1);
+    }
+    .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .info-row-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+    .info-row-text strong { display: block; font-size: 0.82rem; font-weight: 600; color: var(--charcoal); margin-bottom: 2px; }
+    .info-row-text span   { font-size: 0.82rem; color: #888; line-height: 1.5; }
+
+    /* Map embed */
+    .map-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      border-top: 4px solid var(--turmeric);
+    }
+    .map-card-header {
+      padding: 16px 24px;
+      background: var(--gold-mist);
+      border-bottom: 1px solid rgba(244,167,38,0.2);
+    }
+    .map-card-header h4 {
+      font-size: 0.85rem;
+      font-family: var(--font-body);
+      font-weight: 700;
+      color: var(--burgundy);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .map-placeholder {
+      height: 180px;
+      background: linear-gradient(135deg, #f0e6d8, var(--gold-mist));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--burgundy);
+    }
+    .map-placeholder span { font-size: 2.8rem; }
+    .map-placeholder p { font-size: 0.82rem; font-weight: 600; letter-spacing: 0.3px; }
+    .map-actions {
+      padding: 14px 20px;
+      display: flex;
+      gap: 10px;
+      border-top: 1px solid rgba(244,167,38,0.15);
+    }
+    .map-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: all var(--transition);
+      border: 1.5px solid var(--saffron);
+      box-shadow: none;
+    }
+    .map-btn-primary { background: var(--saffron); color: var(--white); }
+    .map-btn-primary:hover { background: var(--ember); transform: none; box-shadow: none; }
+    .map-btn-secondary { background: transparent; color: var(--saffron); }
+    .map-btn-secondary:hover { background: var(--gold-mist); transform: none; box-shadow: none; }
+
+    /* ── FAQ strip ── */
+    .faq-section {
+      background: var(--cream);
+      padding: 72px 10%;
+      border-top: 1px solid rgba(244,167,38,0.15);
+    }
+
+    .faq-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+
+    .faq-item {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      box-shadow: var(--shadow-card);
+      border-left: 4px solid var(--saffron);
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .faq-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+    .faq-item h4 { font-size: 0.95rem; margin-bottom: 8px; color: var(--charcoal); }
+    .faq-item p  { font-size: 0.85rem; color: #777; line-height: 1.6; }
+
+    /* ── Footer strip ── */
+    .footer-strip {
+      background: #111;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+      padding: 20px;
+      font-size: 0.8rem;
+      border-top: 3px solid var(--saffron);
+    }
+    .footer-strip a { color: var(--saffron); text-decoration: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1000px) {
+      .contact-layout { grid-template-columns: 1fr; padding: 48px 6%; }
+      .contact-sidebar { order: -1; }
+    }
+    @media (max-width: 600px) {
+      .field-row   { grid-template-columns: 1fr; }
+      .topic-grid  { grid-template-columns: 1fr; }
+      .page-hero   { padding: 60px 6% 40px; }
+      .contact-form-body { padding: 24px 20px; }
+      .faq-section { padding: 48px 6%; }
+      .submit-row  { flex-direction: column; align-items: stretch; }
+      .btn-submit  { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navigation ── -->
+  <nav>
+    <div class="nav-brand">
+      <span class="brand-name">SpiceGarden</span>
+      <span class="brand-tagline">Fusion Kitchen</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="menu.html">Menu</a></li>
+      <li><a href="reservation.html">Reservation</a></li>
+      <li><a href="contact.html" class="active">Contact</a></li>
+      <li><a href="reservation.html" class="nav-cta">Book a Table</a></li>
+    </ul>
+  </nav>
+
+  <!-- ── Page Hero ── -->
+  <div class="page-hero">
+    <div class="page-hero-text">
+      <span class="section-label">We'd Love to Hear from You</span>
+      <h1>Get in Touch</h1>
+      <p>Questions, feedback, or just want to say hello — we respond within 24 hours.</p>
+    </div>
+  </div>
+
+  <div class="spice-strip"></div>
+
+  <!-- ── Main Layout ── -->
+  <div class="contact-layout">
+
+    <!-- ── Left: Contact Form ── -->
+    <div class="contact-form-card">
+      <div class="contact-form-header">
+        <h2>Send Us a Message</h2>
+        <p>Fill in the details below and our team will get back to you shortly.</p>
+      </div>
+      <div class="contact-form-body">
+
+        <!-- Form panel -->
+        <div id="form-panel">
+
+          <!-- Topic -->
+          <div class="field-group">
+            <label>💬 What's This About?</label>
+            <div class="topic-grid">
+              <button class="topic-btn selected" onclick="selectTopic(this)">🍽️ General Enquiry</button>
+              <button class="topic-btn" onclick="selectTopic(this)">📅 Reservation Help</button>
+              <button class="topic-btn" onclick="selectTopic(this)">🎉 Private Events</button>
+              <button class="topic-btn" onclick="selectTopic(this)">🍛 Menu / Dietary</button>
+              <button class="topic-btn" onclick="selectTopic(this)">💼 Business / Press</button>
+              <button class="topic-btn" onclick="selectTopic(this)">⭐ Feedback</button>
+            </div>
+          </div>
+
+          <!-- Name + Email -->
+          <div class="field-row">
+            <div class="field-group">
+              <label>👤 Your Name <span class="req">*</span></label>
+              <input type="text" id="c-name" placeholder="Amara Perera" />
+            </div>
+            <div class="field-group">
+              <label>📧 Email <span class="req">*</span></label>
+              <input type="email" id="c-email" placeholder="amara@email.com" />
+            </div>
+          </div>
+
+          <!-- Phone -->
+          <div class="field-group">
+            <label>📞 Phone <span style="color:#bbb;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+            <input type="tel" id="c-phone" placeholder="+94 77 123 4567" />
+          </div>
+
+          <!-- Message -->
+          <div class="field-group">
+            <label>✍️ Message <span class="req">*</span></label>
+            <textarea id="c-message" placeholder="Tell us how we can help — the more detail, the better!" oninput="updateCount(this)"></textarea>
+            <div class="field-meta">
+              <span class="char-count" id="char-count">0 / 500</span>
+            </div>
+          </div>
+
+          <!-- Rating -->
+          <div class="field-group">
+            <label>⭐ Your Overall Experience</label>
+            <div class="rating-row">
+              <button class="rating-star" onclick="setRating(1)" title="1 star">★</button>
+              <button class="rating-star" onclick="setRating(2)" title="2 stars">★</button>
+              <button class="rating-star" onclick="setRating(3)" title="3 stars">★</button>
+              <button class="rating-star" onclick="setRating(4)" title="4 stars">★</button>
+              <button class="rating-star" onclick="setRating(5)" title="5 stars">★</button>
+              <span class="rating-label" id="rating-label">Tap to rate</span>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <div class="submit-row">
+            <span class="submit-note">
+              <i class="fa-solid fa-lock" style="color:var(--saffron);"></i>
+              Your details are never shared.
+            </span>
+            <button class="btn-submit" onclick="handleContact()">
+              <i class="fa-solid fa-paper-plane"></i> Send Message
+            </button>
+          </div>
+
+        </div><!-- /form-panel -->
+
+        <!-- Success panel -->
+        <div class="success-toast" id="success-panel">
+          <div class="toast-icon">✓</div>
+          <h3>Message Sent!</h3>
+          <p>Thanks for reaching out. Our team typically replies within a few hours during business hours.</p>
+          <p style="margin-top:10px;">
+            Need faster help? Call us at
+            <a href="tel:+94112345678" style="color:var(--saffron);font-weight:600;">+94 11 234 5678</a>
+            or reach us on
+            <a href="https://wa.me/94700000000" style="color:#25d366;font-weight:600;">WhatsApp</a>.
+          </p>
+          <button onclick="resetForm()" style="margin-top:24px; padding:12px 28px;">Send Another</button>
+        </div>
+
+      </div>
+    </div><!-- /contact-form-card -->
+
+    <!-- ── Right Sidebar ── -->
+    <aside class="contact-sidebar">
+
+      <!-- Social / Channel links -->
+      <div class="social-card">
+        <div class="social-card-header"><h4>📡 Connect With Us</h4></div>
+        <div class="social-links">
+          <a href="mailto:spicegarden@email.com" class="social-link">
+            <div class="social-icon-wrap s-email"><i class="fa-solid fa-envelope"></i></div>
+            <div class="social-link-text">
+              <strong>Email</strong>
+              <span>spicegarden@email.com</span>
+            </div>
+            <i class="fa-solid fa-chevron-right social-link-arrow"></i>
+          </a>
+          <a href="tel:+94112345678" class="social-link">
+            <div class="social-icon-wrap s-phone"><i class="fa-solid fa-phone"></i></div>
+            <div class="social-link-text">
+              <strong>Call Us</strong>
+              <span>+94 11 234 5678</span>
+            </div>
+            <i class="fa-solid fa-chevron-right social-link-arrow"></i>
+          </a>
+          <a href="https://wa.me/94700000000" target="_blank" class="social-link">
+            <div class="social-icon-wrap s-whatsapp"><i class="fa-brands fa-whatsapp"></i></div>
+            <div class="social-link-text">
+              <strong>WhatsApp</strong>
+              <span>Quick replies · Usually instant</span>
+            </div>
+            <i class="fa-solid fa-chevron-right social-link-arrow"></i>
+          </a>
+          <a href="https://facebook.com/spicegarden" target="_blank" class="social-link">
+            <div class="social-icon-wrap s-facebook"><i class="fa-brands fa-facebook-f"></i></div>
+            <div class="social-link-text">
+              <strong>Facebook</strong>
+              <span>@SpiceGardenLK</span>
+            </div>
+            <i class="fa-solid fa-chevron-right social-link-arrow"></i>
+          </a>
+          <a href="https://instagram.com/spicegarden" target="_blank" class="social-link">
+            <div class="social-icon-wrap s-instagram"><i class="fa-brands fa-instagram"></i></div>
+            <div class="social-link-text">
+              <strong>Instagram</strong>
+              <span>@SpiceGardenLK</span>
+            </div>
+            <i class="fa-solid fa-chevron-right social-link-arrow"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Contact info -->
+      <div class="info-card">
+        <div class="info-card-header"><h4>📍 Visit Us</h4></div>
+        <div class="info-card-body">
+          <div class="info-row">
+            <span class="info-row-icon">🏠</span>
+            <div class="info-row-text">
+              <strong>Address</strong>
+              <span>42 Galle Road, Colombo 03,<br>Western Province, Sri Lanka</span>
+            </div>
+          </div>
+          <div class="info-row">
+            <span class="info-row-icon">🕐</span>
+            <div class="info-row-text">
+              <strong>Open Today</strong>
+              <span>11:00 AM – 10:30 PM</span>
+            </div>
+          </div>
+          <div class="info-row">
+            <span class="info-row-icon">⏱️</span>
+            <div class="info-row-text">
+              <strong>Response Time</strong>
+              <span>Within 24 hours (usually faster!)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div class="map-card">
+        <div class="map-card-header">
+          <h4>📍 Find Us on the Map</h4>
+        </div>
+        <div class="map-placeholder">
+          <span>🗺️</span>
+          <p>42 Galle Road, Colombo 03</p>
+        </div>
+        <div class="map-actions">
+          <button class="map-btn map-btn-primary"
+            onclick="window.open('https://maps.google.com/?q=Colombo+03+Galle+Road','_blank')">
+            <i class="fa-solid fa-location-dot"></i> Open in Maps
+          </button>
+          <button class="map-btn map-btn-secondary"
+            onclick="window.open('https://maps.google.com/?q=Colombo+03+Galle+Road&dirflg=d','_blank')">
+            <i class="fa-solid fa-diamond-turn-right"></i> Directions
+          </button>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- ── FAQ Section ── -->
+  <section class="faq-section">
+    <div style="text-align:center;">
+      <span class="section-label">Common Questions</span>
+      <h2 class="section-title">Frequently Asked</h2>
+      <div class="section-divider centered"></div>
+    </div>
+    <div class="faq-grid">
+      <div class="faq-item reveal">
+        <h4>Do you take walk-in guests?</h4>
+        <p>Yes! Walk-ins are welcome, though we recommend reserving a table on weekends and public holidays to avoid wait times.</p>
+      </div>
+      <div class="faq-item reveal">
+        <h4>Can you cater for large groups?</h4>
+        <p>Absolutely. We accommodate groups of up to 50 in our private dining room. Please contact us at least 48 hours in advance.</p>
+      </div>
+      <div class="faq-item reveal">
+        <h4>Do you offer takeaway or delivery?</h4>
+        <p>Takeaway is available daily. Delivery is available through PickMe Food and Uber Eats within a 10 km radius of Colombo 03.</p>
+      </div>
+      <div class="faq-item reveal">
+        <h4>Are you allergy-friendly?</h4>
+        <p>We take allergies very seriously. Please notify us of any dietary requirements when booking and we'll ensure safe, delicious options.</p>
+      </div>
+      <div class="faq-item reveal">
+        <h4>Do you have a kids' menu?</h4>
+        <p>Yes! Our junior menu features mild, child-friendly fusion dishes crafted with the same quality ingredients as our main menu.</p>
+      </div>
+      <div class="faq-item reveal">
+        <h4>Can I bring my own cake?</h4>
+        <p>Of course! We welcome celebration cakes with prior notice. A small corkage fee of LKR 500 applies for outside desserts.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <div class="footer-strip">
+    © 2025 <a href="index.html">SpiceGarden</a> Fusion Kitchen. All rights reserved.
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // ── Topic selector ──
+    function selectTopic(btn) {
+      document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    }
+
+    // ── Star rating ──
+    let currentRating = 0;
+    const ratingLabels = ['', 'Needs Improvement', 'Below Average', 'Good', 'Very Good', 'Excellent! 🌶️'];
+    function setRating(n) {
+      currentRating = n;
+      document.querySelectorAll('.rating-star').forEach((s, i) => {
+        s.classList.toggle('lit', i < n);
+      });
+      document.getElementById('rating-label').textContent = ratingLabels[n];
+    }
+
+    // ── Char counter ──
+    function updateCount(el) {
+      const len = el.value.length;
+      document.getElementById('char-count').textContent = len + ' / 500';
+      if (len > 500) el.value = el.value.substring(0, 500);
+    }
+
+    // ── Handle contact submit ──
+    function handleContact(e) {
+      if (e) e.preventDefault();
+      const name    = document.getElementById('c-name').value.trim();
+      const email   = document.getElementById('c-email').value.trim();
+      const message = document.getElementById('c-message').value.trim();
+      if (!name || !email || !message) {
+        alert('Please fill in your name, email, and message.');
+        return;
+      }
+      document.getElementById('form-panel').style.display    = 'none';
+      document.getElementById('success-panel').classList.add('show');
+    }
+
+    // ── Reset ──
+    function resetForm() {
+      document.getElementById('form-panel').style.display    = '';
+      document.getElementById('success-panel').classList.remove('show');
+      document.getElementById('c-name').value    = '';
+      document.getElementById('c-email').value   = '';
+      document.getElementById('c-phone').value   = '';
+      document.getElementById('c-message').value = '';
+      document.getElementById('char-count').textContent = '0 / 500';
+      setRating(0);
+      document.getElementById('rating-label').textContent = 'Tap to rate';
+    }
+
+    // ── Scroll reveal ──
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

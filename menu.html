@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Menu — SpiceGarden Fusion Kitchen</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+
+    /* ── Page Hero (mini) ── */
+    .page-hero {
+      background: linear-gradient(135deg, var(--charcoal) 0%, #2c1810 60%, var(--burgundy) 100%);
+      padding: 72px 10% 60px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page-hero::before {
+      content: '🍽️';
+      position: absolute;
+      font-size: 18rem;
+      right: 4%;
+      top: -40px;
+      opacity: 0.055;
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    .page-hero-text { position: relative; z-index: 1; }
+    .page-hero-text h1 { color: var(--white); margin-bottom: 8px; }
+    .page-hero-text p  { color: rgba(255,248,240,0.65); font-size: 1.05rem; }
+
+    /* ── Sticky Filter Bar ── */
+    .filter-bar {
+      position: sticky;
+      top: 72px;
+      z-index: 90;
+      background: var(--white);
+      border-bottom: 2px solid rgba(244,167,38,0.18);
+      box-shadow: 0 4px 20px rgba(26,26,26,0.07);
+      padding: 0 10%;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .filter-bar::-webkit-scrollbar { display: none; }
+
+    .filter-tab {
+      flex-shrink: 0;
+      padding: 18px 24px;
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #888;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      transition: all var(--transition);
+      letter-spacing: 0.3px;
+      box-shadow: none;
+      border-radius: 0;
+      transform: none;
+      margin-bottom: -2px;
+    }
+
+    .filter-tab:hover {
+      color: var(--saffron);
+      background: rgba(255,107,53,0.04);
+      transform: none;
+      box-shadow: none;
+    }
+
+    .filter-tab.active {
+      color: var(--saffron);
+      border-bottom-color: var(--saffron);
+      background: transparent;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* ── Layout: sidebar + grid ── */
+    .menu-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 40px;
+      padding: 60px 10%;
+      max-width: 1400px;
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    /* ── Sidebar ── */
+    .menu-sidebar {
+      position: sticky;
+      top: 136px;
+    }
+
+    .sidebar-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: 28px 24px;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 20px;
+      border-top: 4px solid var(--saffron);
+    }
+
+    .sidebar-card h4 {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #aaa;
+      font-family: var(--font-body);
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .spice-levels {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .spice-level-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      background: var(--cream);
+      border: 1.5px solid rgba(244,167,38,0.15);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      color: #555;
+      font-weight: 500;
+      transition: all var(--transition);
+      text-align: left;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .spice-level-btn:hover,
+    .spice-level-btn.active {
+      border-color: var(--saffron);
+      background: var(--gold-mist);
+      color: var(--charcoal);
+      transform: none;
+      box-shadow: none;
+    }
+
+    .diet-filters {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .diet-check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.88rem;
+      color: #555;
+      cursor: pointer;
+    }
+
+    .diet-check input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--saffron);
+      cursor: pointer;
+    }
+
+    .sidebar-cta {
+      background: linear-gradient(135deg, var(--saffron), var(--ember));
+      border-radius: var(--radius-md);
+      padding: 28px 24px;
+      text-align: center;
+      color: var(--white);
+      box-shadow: 0 8px 28px rgba(255,107,53,0.3);
+    }
+
+    .sidebar-cta p {
+      color: rgba(255,255,255,0.82);
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .sidebar-cta button {
+      background: var(--white);
+      color: var(--ember);
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 11px 22px;
+      box-shadow: none;
+    }
+
+    .sidebar-cta button:hover {
+      background: var(--cream);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
+    /* ── Main Menu Area ── */
+
+
+    /* Category heading */
+    .category-heading {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 40px 0 24px;
+    }
+
+    .category-heading:first-child { margin-top: 0; }
+
+    .category-heading h2 {
+      font-size: 1.4rem;
+      color: var(--charcoal);
+      white-space: nowrap;
+    }
+
+    .category-heading::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(244,167,38,0.25);
+    }
+
+    /* ── Menu Item Cards ── */
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 24px;
+    }
+
+    .menu-item-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+      border: 1px solid rgba(244,167,38,0.1);
+      transition: transform var(--transition), box-shadow var(--transition);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .menu-item-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .menu-item-img {
+      height: 175px;
+      background: linear-gradient(135deg, var(--gold-mist), #f5ddb8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .item-badges {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .item-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 50px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-family: var(--font-body);
+    }
+
+    .badge-veg   { background: #d4edda; color: #155724; }
+    .badge-spicy { background: #f8d7da; color: #721c24; }
+    .badge-new   { background: var(--turmeric); color: var(--charcoal); }
+    .badge-chef  { background: var(--charcoal); color: var(--turmeric); }
+
+    .spice-meter {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(26,26,26,0.65);
+      border-radius: 50px;
+      padding: 3px 8px;
+      font-size: 0.7rem;
+      backdrop-filter: blur(4px);
+    }
+
+    .menu-item-body {
+      padding: 18px 18px 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .item-category-tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--saffron);
+      margin-bottom: 6px;
+      font-family: var(--font-body);
+    }
+
+    .menu-item-body h3 {
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+      color: var(--charcoal);
+    }
+
+    .menu-item-body p {
+      font-size: 0.83rem;
+      color: #777;
+      line-height: 1.55;
+      flex: 1;
+      margin-bottom: 16px;
+    }
+
+    .item-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+    }
+
+    .item-price {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--saffron);
+      line-height: 1;
+    }
+
+    .item-price small {
+      display: block;
+      font-family: var(--font-body);
+      font-size: 0.7rem;
+      color: #bbb;
+      font-weight: 400;
+    }
+
+    .add-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--saffron), var(--ember));
+      color: var(--white);
+      border: none;
+      font-size: 1.3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 4px 12px rgba(255,107,53,0.35);
+      padding: 0;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .add-btn:hover {
+      transform: scale(1.12) translateY(0);
+      box-shadow: 0 6px 20px rgba(255,107,53,0.5);
+    }
+
+    .add-btn.added {
+      background: linear-gradient(135deg, #27ae60, #1e8449);
+      box-shadow: 0 4px 12px rgba(39,174,96,0.35);
+    }
+
+    /* ── Cart Notification ── */
+    .cart-notification {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      background: var(--charcoal);
+      color: var(--white);
+      padding: 14px 24px;
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 9999;
+      border-left: 4px solid var(--turmeric);
+      pointer-events: none;
+    }
+
+    .cart-notification.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Survey Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(26,26,26,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 48px 40px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+      border-top: 5px solid var(--turmeric);
+      transform: translateY(20px);
+      transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.open .modal-card {
+      transform: translateY(0);
+    }
+
+    .modal-card .modal-icon { font-size: 3rem; margin-bottom: 16px; }
+
+    .modal-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+      color: var(--charcoal);
+    }
+
+    .modal-card p {
+      color: #777;
+      font-size: 0.92rem;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    .likert-wrap {
+      margin-bottom: 32px;
+    }
+
+    .likert-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #aaa;
+      margin-bottom: 10px;
+    }
+
+    .likert-emojis {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: linear-gradient(90deg, var(--saffron), var(--turmeric));
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      background: var(--saffron);
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(255,107,53,0.4);
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: #bbb;
+    }
+
+    .empty-state .empty-icon { font-size: 4rem; margin-bottom: 16px; display: block; }
+    .empty-state p { font-size: 0.95rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .menu-layout { grid-template-columns: 1fr; padding: 40px 6%; }
+      .menu-sidebar { position: static; }
+      .filter-bar { padding: 0 6%; top: 72px; }
+      .page-hero { padding: 60px 6% 40px; }
+    }
+
+    @media (max-width: 600px) {
+      .menu-grid { grid-template-columns: 1fr; }
+      .cart-notification { right: 16px; bottom: 16px; left: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navigation ── -->
+  <nav>
+    <div class="nav-brand">
+      <span class="brand-name">SpiceGarden</span>
+      <span class="brand-tagline">Fusion Kitchen</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="menu.html" class="active">Menu</a></li>
+      <li><a href="reservation.html">Reservation</a></li>
+      <li><a href="contact.html">Contact</a></li>
+      <li><a href="reservation.html" class="nav-cta">Book a Table</a></li>
+    </ul>
+  </nav>
+
+  <!-- ── Page Hero ── -->
+  <div class="page-hero">
+    <div class="page-hero-text">
+      <span class="section-label">Explore Our Kitchen</span>
+      <h1>Our Menu</h1>
+      <p>Bold flavours, fresh ingredients, crafted with passion.</p>
+    </div>
+    <a href="reservation.html" class="btn btn-primary" style="flex-shrink:0;">Reserve a Table →</a>
+  </div>
+
+  <div class="spice-strip"></div>
+
+  <!-- ── Sticky Category Filter Bar ── -->
+  <div class="filter-bar" id="filterBar">
+    <button class="filter-tab active" onclick="filterCategory('all', this)">🍽️ All Items</button>
+    <button class="filter-tab" onclick="filterCategory('starters', this)">🥗 Starters</button>
+    <button class="filter-tab" onclick="filterCategory('mains', this)">🍛 Mains</button>
+    <button class="filter-tab" onclick="filterCategory('breads', this)">🫓 Breads</button>
+    <button class="filter-tab" onclick="filterCategory('desserts', this)">🍮 Desserts</button>
+    <button class="filter-tab" onclick="filterCategory('drinks', this)">🥤 Drinks</button>
+  </div>
+
+  <!-- ── Main Layout ── -->
+  <div class="menu-layout">
+
+    <!-- Sidebar -->
+    <aside class="menu-sidebar">
+      <div class="sidebar-card">
+        <h4>🌶️ Spice Level</h4>
+        <div class="spice-levels">
+          <button class="spice-level-btn active" onclick="selectSpice(this)">🌶️ Mild — Gentle warmth</button>
+          <button class="spice-level-btn" onclick="selectSpice(this)">🌶️🌶️ Medium — Bold kick</button>
+          <button class="spice-level-btn" onclick="selectSpice(this)">🌶️🌶️🌶️ Hot — Full fire</button>
+          <button class="spice-level-btn" onclick="selectSpice(this)">🔥 Chef's Fire — Extreme</button>
+        </div>
+      </div>
+
+      <div class="sidebar-card" style="border-top-color: var(--turmeric);">
+        <h4>🥦 Dietary</h4>
+        <div class="diet-filters">
+          <label class="diet-check"><input type="checkbox" onchange="applyDiet()"> Vegetarian only</label>
+          <label class="diet-check"><input type="checkbox" onchange="applyDiet()"> Gluten-free</label>
+          <label class="diet-check"><input type="checkbox" onchange="applyDiet()"> Dairy-free</label>
+          <label class="diet-check"><input type="checkbox" onchange="applyDiet()"> Nut-free</label>
+        </div>
+      </div>
+
+      <div class="sidebar-cta">
+        <p>Can't decide? Let our chef craft a surprise tasting menu just for you.</p>
+        <button onclick="location.href='reservation.html'">Chef's Table →</button>
+      </div>
+    </aside>
+
+    <!-- Menu Main -->
+    <main class="menu-main" id="menu">
+
+      <!-- Starters -->
+      <div class="category-section" data-cat="starters">
+        <div class="category-heading">
+          <h2>🥗 Starters</h2>
+        </div>
+        <div class="menu-grid" id="starters-grid">
+          <!-- JS injects cards -->
+        </div>
+      </div>
+
+      <!-- Mains -->
+      <div class="category-section" data-cat="mains">
+        <div class="category-heading">
+          <h2>🍛 Mains</h2>
+        </div>
+        <div class="menu-grid" id="mains-grid">
+        </div>
+      </div>
+
+      <!-- Breads -->
+      <div class="category-section" data-cat="breads">
+        <div class="category-heading">
+          <h2>🫓 Breads</h2>
+        </div>
+        <div class="menu-grid" id="breads-grid">
+        </div>
+      </div>
+
+      <!-- Desserts -->
+      <div class="category-section" data-cat="desserts">
+        <div class="category-heading">
+          <h2>🍮 Desserts</h2>
+        </div>
+        <div class="menu-grid" id="desserts-grid">
+        </div>
+      </div>
+
+      <!-- Drinks -->
+      <div class="category-section" data-cat="drinks">
+        <div class="category-heading">
+          <h2>🥤 Drinks</h2>
+        </div>
+        <div class="menu-grid" id="drinks-grid">
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── Cart Notification ── -->
+  <div id="notification" class="cart-notification">
+    <span>✓</span>
+    <span id="notification-text">Added to your order!</span>
+  </div>
+
+  <!-- ── Survey Modal ── -->
+  <div id="survey-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-icon">🌶️</div>
+      <h3>How Was Our Menu?</h3>
+      <p>Your feedback helps us craft even better experiences. Rate our menu descriptions from Bland to Fiery!</p>
+      <div class="likert-wrap">
+        <div class="likert-emojis">
+          <span>😐</span><span>🙂</span><span>😊</span><span>😋</span><span>🤩</span>
+        </div>
+        <input type="range" id="likert" min="1" max="5" value="3" />
+        <div class="likert-labels">
+          <span>Needs Work</span>
+          <span>Excellent!</span>
+        </div>
+      </div>
+      <button onclick="submitSurvey()" style="width:100%; padding:16px; font-size:1rem;">
+        Submit Feedback ✓
+      </button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // ── Fallback menu data if app.js doesn't supply it ──
+    const fallbackMenu = [
+      { id:1, category:'starters', emoji:'🥗', name:'Spiced Lentil Soup',       desc:'A fragrant blend of red lentils, cumin & fresh coriander, served with warm naan.', price:'LKR 850',  badges:['veg'],          spice:'🌶️'    },
+      { id:2, category:'starters', emoji:'🍢', name:'Seekh Kebab Skewers',      desc:'Minced lamb mixed with garam masala, grilled on charcoal & served with mint chutney.', price:'LKR 1,400', badges:['spicy'],       spice:'🌶️🌶️' },
+      { id:3, category:'starters', emoji:'🧅', name:'Onion Bhaji Basket',       desc:'Crispy golden onion fritters with green chilli & yoghurt dipping sauce.',  price:'LKR 700',  badges:['veg','new'],    spice:'🌶️'    },
+      { id:4, category:'mains',    emoji:'🍗', name:'Tandoori Butter Chicken',  desc:'Slow-cooked chicken in a velvety tomato-cream sauce, kissed with smoked fenugreek.', price:'LKR 2,200', badges:['chef'],       spice:'🌶️🌶️' },
+      { id:5, category:'mains',    emoji:'🐑', name:'Rogan Josh',               desc:'Slow-braised lamb shoulder in a deep Kashmiri chilli gravy with whole spices.', price:'LKR 2,600', badges:['spicy'],        spice:'🌶️🌶️🌶️'},
+      { id:6, category:'mains',    emoji:'🫘', name:'Dal Makhani',              desc:'Black lentils simmered overnight in butter & cream — the ultimate comfort dish.', price:'LKR 1,500', badges:['veg'],        spice:'🌶️'    },
+      { id:7, category:'mains',    emoji:'🦐', name:'Goan Prawn Curry',         desc:'Tiger prawns in a coconut-tamarind gravy with toasted kokum & mustard seeds.', price:'LKR 2,800', badges:['new','spicy'],  spice:'🌶️🌶️' },
+      { id:8, category:'breads',   emoji:'🫓', name:'Butter Naan',              desc:'Hand-stretched leavened bread baked in a clay tandoor, brushed with cultured butter.', price:'LKR 350', badges:['veg'],     spice:''       },
+      { id:9, category:'breads',   emoji:'🌿', name:'Garlic & Herb Paratha',    desc:'Flaky whole-wheat flatbread layered with roasted garlic, fresh methi & ghee.', price:'LKR 450', badges:['veg'],           spice:'🌶️'    },
+      { id:10,category:'desserts', emoji:'🍮', name:'Saffron Panna Cotta',      desc:'Silky vanilla cream set with Sri Lankan saffron & topped with pistachio praline.', price:'LKR 900', badges:['veg','chef'], spice:''       },
+      { id:11,category:'desserts', emoji:'🍨', name:'Rose & Cardamom Kulfi',    desc:'Traditional Indian ice cream with Damascus rose water, cardamom & crushed almonds.', price:'LKR 750', badges:['veg'],     spice:''       },
+      { id:12,category:'drinks',   emoji:'🥭', name:'Mango Lassi',              desc:'Chilled Alphonso mango blended with thick yoghurt, honey & a pinch of cardamom.', price:'LKR 550', badges:['veg'],        spice:''       },
+      { id:13,category:'drinks',   emoji:'🌹', name:'Rose Sherbet',             desc:'House-made rose syrup with cold milk, basil seeds & crushed ice — utterly refreshing.', price:'LKR 500', badges:['veg'],  spice:''       },
+    ];
+
+    function buildCard(item) {
+      const badgeMap = {
+        veg:   '<span class="item-badge badge-veg">🌿 Veg</span>',
+        spicy: '<span class="item-badge badge-spicy">🌶️ Spicy</span>',
+        new:   '<span class="item-badge badge-new">New</span>',
+        chef:  '<span class="item-badge badge-chef">Chef\'s Pick</span>',
+      };
+      const badgesHtml = (item.badges || []).map(b => badgeMap[b] || '').join('');
+      const spiceHtml  = item.spice ? `<span class="spice-meter">${item.spice}</span>` : '';
+
+      return `
+        <div class="menu-item-card reveal" data-category="${item.category}">
+          <div class="menu-item-img">
+            ${item.emoji || '🍽️'}
+            <div class="item-badges">${badgesHtml}</div>
+            ${spiceHtml}
+          </div>
+          <div class="menu-item-body">
+            <div class="item-category-tag">${item.category}</div>
+            <h3>${item.name || item['dish-title'] || 'Dish'}</h3>
+            <p>${item.desc || item['dish-desc'] || ''}</p>
+            <div class="item-footer">
+              <div class="item-price">
+                ${item.price || ''}
+                <small>per serving</small>
+              </div>
+              <button class="add-btn" onclick="addToCart('${(item.name||'').replace(/'/g,"\\'")}', this)" title="Add to order">+</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function populateMenu(items) {
+      const cats = ['starters','mains','breads','desserts','drinks'];
+      cats.forEach(cat => {
+        const grid = document.getElementById(cat + '-grid');
+        if (!grid) return;
+        const catItems = items.filter(i => (i.category || '').toLowerCase() === cat);
+        if (catItems.length) {
+          grid.innerHTML = catItems.map(buildCard).join('');
+        } else {
+          // Hide section if empty
+          const section = grid.closest('.category-section');
+          if (section) section.style.display = 'none';
+        }
+      });
+      // trigger reveal observer
+      observeReveal();
+    }
+
+    // Try to use app.js data, fall back to static data
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof menuData !== 'undefined' && Array.isArray(menuData)) {
+        populateMenu(menuData);
+      } else {
+        populateMenu(fallbackMenu);
+      }
+    });
+
+    // ── Category filter ──
+    function filterCategory(cat, btn) {
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.category-section').forEach(sec => {
+        sec.style.display = (cat === 'all' || sec.dataset.cat === cat) ? '' : 'none';
+      });
+    }
+
+    // ── Spice selector ──
+    function selectSpice(btn) {
+      document.querySelectorAll('.spice-level-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    // ── Diet filter (stub — wire to real logic if needed) ──
+    function applyDiet() { /* extend as needed */ }
+
+    // ── Add to cart ──
+    function addToCart(name, btn) {
+      // Flash button green
+      btn.textContent = '✓';
+      btn.classList.add('added');
+      setTimeout(() => { btn.textContent = '+'; btn.classList.remove('added'); }, 1500);
+
+      // Show notification
+      const notif = document.getElementById('notification');
+      document.getElementById('notification-text').textContent =
+        name ? `"${name}" added to your order!` : 'Added to your order!';
+      notif.classList.add('show');
+      clearTimeout(notif._timer);
+      notif._timer = setTimeout(() => notif.classList.remove('show'), 2800);
+    }
+
+    // ── Survey modal ──
+    function showSurvey() {
+      document.getElementById('survey-modal').classList.add('open');
+    }
+
+    function submitSurvey() {
+      const val = document.getElementById('likert').value;
+      document.getElementById('survey-modal').classList.remove('open');
+      const stars = ['😐','🙂','😊','😋','🤩'][val - 1];
+      const notif = document.getElementById('notification');
+      document.getElementById('notification-text').textContent = `Thanks for your ${stars} feedback!`;
+      notif.classList.add('show');
+      setTimeout(() => notif.classList.remove('show'), 3000);
+    }
+
+    // Close modal on overlay click
+    document.getElementById('survey-modal').addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('open');
+    });
+
+    // ── Scroll reveal ──
+    function observeReveal() {
+      const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+    }
+    observeReveal();
+  </script>
+</body>
+</html>
