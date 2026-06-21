@@ -1,6 +1,45 @@
 /* ============================================================
    SpiceGarden — app.js
    Central client-side logic for all pages
+
+   ── A/B EXPERIMENT DATA SCHEMA (for methods-section reference) ──
+   Every logged event includes: { action, sessionId, anonId, ts, ...fields }
+
+   exposure    { dish, variant, variantIndex, page }
+               Fired once per page view, after the target dish's card
+               has been continuously >=60% visible for MIN_DWELL_MS.
+               This is the "treatment received" event — the denominator
+               for conversion rate and the trigger for the survey.
+
+   add_to_cart { dish, variant, variantIndex }
+               Fired on every add-to-cart click, any dish. Behavioral
+               log, not an experimental outcome by itself.
+
+   conversion  { dish, variant, variantIndex, latencyMs }
+               Fired ONCE PER PERSON (gated on a persistent localStorage
+               flag, not per session) the first time they add the
+               target dish to cart. latencyMs is time from first logged
+               exposure to this conversion within the same session/visit;
+               it is null if no exposure was logged in this session
+               (e.g. they converted on a return visit, or via the
+               no-JS/fallback menu path).
+
+   survey      { dish, variant, variantIndex, appeal_item1..3,
+                 appeal_composite, manipulationCheck }
+               Fired ONCE PER PERSON (persistent flag), triggered by
+               exposure (not by conversion) so ratings aren't a biased
+               sample of people who already committed to ordering.
+
+   NOTE ON UNITS OF ANALYSIS: variant assignment and the conversion/
+   survey "ever" flags are stored in localStorage (persists across
+   sessions, same browser/device). exposure events are logged per
+   SESSION (sessionId), so the same anonId can have multiple exposure
+   rows across visits — for intent-to-treat analysis, collapse to first
+   exposure per anonId; for dosage/repeat-exposure analysis, use all
+   rows clustered by anonId.
+
+   KNOWN LIMITATION: anonId is per-browser/device, not per-person.
+   The same individual on two devices will appear as two anonIds.
    ============================================================ */
 
 'use strict';
@@ -12,14 +51,38 @@ const variants = [
   "An aromatic masterpiece of Kashmiri spices, slow-marinated for 24 hours and charred to perfection.",
 ];
 
-// Pick a consistent variant per session (not random every page load)
+// The single dish under experimental manipulation. Centralized here so
+// every page (and the survey's manipulation check) references the same
+// value instead of separately hardcoded strings that can drift apart.
+const TARGET_DISH = 'Tandoori Butter Chicken';
+
+// ── Persistent anonymous visitor ID ──────────────────────────
+// Survives across sessions (unlike sessionStorage) so the same person
+// returning later is recognized as one unit of observation, not
+// double-counted as a fresh participant. No PII is ever stored here.
+function getAnonId() {
+  let id = localStorage.getItem('sg_anon_id');
+  if (!id) {
+    id = (window.crypto && typeof crypto.randomUUID === 'function')
+      ? crypto.randomUUID()
+      : 'anon_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2);
+    localStorage.setItem('sg_anon_id', id);
+  }
+  return id;
+}
+const anonId = getAnonId();
+
+// Pick a variant ONCE per person (persisted in localStorage, not
+// sessionStorage) — otherwise the same individual could be assigned a
+// different framing on a later visit, contaminating the between-subjects
+// design with within-subject repeats.
 const variantIndex = (() => {
-  let idx = sessionStorage.getItem('sg_variant');
+  let idx = localStorage.getItem('sg_variant');
   if (idx === null) {
     idx = Math.floor(Math.random() * variants.length);
-    sessionStorage.setItem('sg_variant', idx);
+    localStorage.setItem('sg_variant', idx);
   }
-  return parseInt(idx);
+  return parseInt(idx, 10);
 })();
 
 const selectedDesc = variants[variantIndex];
@@ -55,7 +118,7 @@ const menuData = [
   // Mains
   {
     id: 5, category: 'mains', emoji: '🍗',
-    name: 'Tandoori Butter Chicken',
+    name: TARGET_DISH,
     desc: selectedDesc, // A/B test variant applied here
     price: 'LKR 2,200', badges: ['chef'], spice: '🌶️🌶️',
   },
@@ -172,6 +235,93 @@ function showToast(message, type = 'success') {
   notif._toastTimer = setTimeout(() => notif.classList.remove('show'), 3000);
 }
 
+// ── Session ID helper (per visit/tab) ────────────────────────
+function getSessionId() {
+  let id = sessionStorage.getItem('sg_session_id');
+  if (!id) {
+    id = 'sess_' + Math.random().toString(36).substr(2, 9);
+    sessionStorage.setItem('sg_session_id', id);
+  }
+  return id;
+}
+
+// ── Generic server event logger ──────────────────────────────
+function logEvent(action, data = {}) {
+  const payload = { action, ...data, sessionId: getSessionId(), anonId, ts: new Date().toISOString() };
+
+  const endpoint = action === 'contact_form' ? '/save-contact'
+                 : action === 'order'         ? '/save-order'
+                 : '/save';
+
+  fetch(endpoint, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload),
+  }).catch(() => {
+    // Server offline during dev — store locally
+    const log = JSON.parse(localStorage.getItem('sg_event_log') || '[]');
+    log.push(payload);
+    localStorage.setItem('sg_event_log', JSON.stringify(log.slice(-50)));
+  });
+}
+
+// ── Exposure tracking for the A/B-tested dish ────────────────
+// Logs an 'exposure' event the first time the target dish's card has
+// been continuously visible (>=60% in viewport) for MIN_DWELL_MS within
+// THIS page view, then schedules the appeal survey shortly after — this
+// decouples the appeal rating from add-to-cart, so non-converters are
+// surveyed too.
+const MIN_DWELL_MS    = 3000;
+const SURVEY_DELAY_MS = 2000;
+
+function trackExposure() {
+  const el = document.querySelector('[data-exposure-target="true"]');
+  if (!el) return; // target card not on this page / not yet rendered
+
+  let dwellTimer = null;
+  let alreadyExposed = false;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !alreadyExposed) {
+        dwellTimer = setTimeout(() => {
+          alreadyExposed = true;
+          sessionStorage.setItem('sg_exposed_at', String(Date.now()));
+
+          logEvent('exposure', {
+            dish: TARGET_DISH,
+            variant: selectedDesc,
+            variantIndex,
+            page: window.location.pathname.split('/').pop() || 'index.html',
+          });
+
+          observer.disconnect();
+          maybeScheduleSurvey();
+        }, MIN_DWELL_MS);
+      } else if (dwellTimer) {
+        clearTimeout(dwellTimer);
+        dwellTimer = null;
+      }
+    });
+  }, { threshold: 0.6 });
+
+  observer.observe(el);
+}
+
+function maybeScheduleSurvey() {
+  // One survey response per PERSON, ever — not per visit, and not
+  // gated on conversion, so the appeal sample isn't biased toward
+  // people who already committed to ordering.
+  if (localStorage.getItem('sg_survey_completed')) return;
+  if (sessionStorage.getItem('sg_survey_scheduled')) return;
+  sessionStorage.setItem('sg_survey_scheduled', '1');
+
+  setTimeout(() => {
+    const modal = document.getElementById('survey-modal');
+    if (modal) modal.classList.add('open');
+  }, SURVEY_DELAY_MS);
+}
+
 // ── Add to cart (called from menu cards) ────────────────────
 function addToCart(dishName, btnEl) {
   const item = menuData.find(m => m.name === dishName);
@@ -186,52 +336,80 @@ function addToCart(dishName, btnEl) {
   }
 
   showToast(`"${dishName}" added to your order!`);
-
-  // Log to server
   logEvent('add_to_cart', { dish: dishName, variant: selectedDesc, variantIndex });
 
-  // Show survey after a short delay (only once per session)
-  if (!sessionStorage.getItem('sg_survey_shown')) {
-    setTimeout(() => {
-      const modal = document.getElementById('survey-modal');
-      if (modal) {
-        modal.classList.add('open');
-        sessionStorage.setItem('sg_survey_shown', '1');
-      }
-    }, 800);
+  // Experimental outcome: fires only for the target dish, only once
+  // EVER per person (localStorage, not sessionStorage) so repeat
+  // visits/clicks don't inflate the conversion count.
+  if (dishName === TARGET_DISH && !localStorage.getItem('sg_converted_target')) {
+    localStorage.setItem('sg_converted_target', '1');
+    const exposedAt = sessionStorage.getItem('sg_exposed_at');
+    const latencyMs = exposedAt ? Date.now() - parseInt(exposedAt, 10) : null;
+    logEvent('conversion', {
+      dish: TARGET_DISH,
+      variant: selectedDesc,
+      variantIndex,
+      latencyMs, // null if no exposure was logged this session (see schema note above)
+    });
   }
 }
 
-// ── Legacy addToCart (no arguments — for old menu.html cards) ─
+// ── Legacy addToCart (no arguments — kept for backward compatibility) ─
 function addToCartLegacy() {
   showToast('Added to your order!');
   logEvent('add_to_cart', { variant: selectedDesc, variantIndex });
-
-  const modal = document.getElementById('survey-modal');
-  if (modal && !sessionStorage.getItem('sg_survey_shown')) {
-    modal.classList.add('open');
-    sessionStorage.setItem('sg_survey_shown', '1');
-  }
 }
 
-// ── Survey submit ────────────────────────────────────────────
+// ── Survey: scale + manipulation-check button selection ──────
+function selectScaleOption(btn) {
+  const group = btn.closest('[data-scale]');
+  if (!group) return;
+  group.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function selectManipOption(btn) {
+  document.querySelectorAll('.manip-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+// ── Survey submit ─────────────────────────────────────────────
+// Captures a 3-item appeal composite + a forced-choice manipulation
+// check, so appeal ratings can be validated against whether the
+// person actually registered which framing they saw.
 function submitSurvey() {
-  const rating = document.getElementById('likert')?.value || 0;
-  const modal  = document.getElementById('survey-modal');
+  const modal = document.getElementById('survey-modal');
 
-  logEvent('survey', { rating: parseInt(rating), variant: selectedDesc, variantIndex });
+  const appealItems = ['appeal-1', 'appeal-2', 'appeal-3'].map(scaleId => {
+    const selected = document.querySelector(`[data-scale="${scaleId}"] .scale-btn.selected`);
+    return selected ? parseInt(selected.dataset.value, 10) : null;
+  });
 
+  if (appealItems.includes(null)) {
+    showToast('Please rate all three statements before submitting.');
+    return;
+  }
+
+  const manipBtn = document.querySelector('.manip-btn.selected');
+  const manipulationCheck = manipBtn ? manipBtn.dataset.value : 'no_response';
+
+  const appealComposite = +(appealItems.reduce((a, b) => a + b, 0) / appealItems.length).toFixed(2);
+
+  logEvent('survey', {
+    dish: TARGET_DISH,
+    variant: selectedDesc,
+    variantIndex,
+    appeal_item1: appealItems[0],
+    appeal_item2: appealItems[1],
+    appeal_item3: appealItems[2],
+    appeal_composite: appealComposite,
+    manipulationCheck,
+  });
+
+  localStorage.setItem('sg_survey_completed', '1');
   if (modal) modal.classList.remove('open');
 
-  const labels = ['😐', '🙂', '😊', '😋', '🤩'];
-  showToast(`Thanks for your ${labels[rating - 1] || '⭐'} feedback!`);
-}
-
-// ── Log order (called from index.html quick-order buttons) ───
-function logOrder(dishName) {
-  cart.add(dishName, '');
-  showToast(`"${dishName}" added to your order!`);
-  logEvent('order', { dish: dishName, timestamp: new Date().toISOString() });
+  showToast('Thanks for your feedback!');
 }
 
 // ── Handle contact form (contact.html) ──────────────────────
@@ -275,37 +453,6 @@ function handleContact(event) {
   .catch(err => console.warn('Contact save failed (server may be offline):', err));
 }
 
-// ── Generic server event logger ──────────────────────────────
-function logEvent(action, data = {}) {
-  const payload = { action, ...data, sessionId: getSessionId(), ts: new Date().toISOString() };
-
-  // Try dedicated endpoint, fall back to /save
-  const endpoint = action === 'contact_form' ? '/save-contact'
-                 : action === 'order'         ? '/save-order'
-                 : '/save';
-
-  fetch(endpoint, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(payload),
-  }).catch(() => {
-    // Server offline during dev — store locally
-    const log = JSON.parse(localStorage.getItem('sg_event_log') || '[]');
-    log.push(payload);
-    localStorage.setItem('sg_event_log', JSON.stringify(log.slice(-50)));
-  });
-}
-
-// ── Session ID helper ────────────────────────────────────────
-function getSessionId() {
-  let id = sessionStorage.getItem('sg_session_id');
-  if (!id) {
-    id = 'sess_' + Math.random().toString(36).substr(2, 9);
-    sessionStorage.setItem('sg_session_id', id);
-  }
-  return id;
-}
-
 // ── DOMContentLoaded — wire up each page ─────────────────────
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -313,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const indexContainer = document.getElementById('menu-container');
   if (indexContainer && !indexContainer.hasChildNodes()) {
     const featured = menuData.filter(m =>
-      ['Tandoori Butter Chicken','Hot Butter Cuttlefish','Saffron Panna Cotta','Dal Makhani'].includes(m.name)
+      [TARGET_DISH, 'Hot Butter Cuttlefish', 'Saffron Panna Cotta', 'Dal Makhani'].includes(m.name)
     );
     featured.forEach(item => {
       const badgeMap = {
@@ -328,6 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const card = document.createElement('div');
       card.className       = 'menu-item-card reveal';
       card.dataset.category = item.category;
+      if (item.name === TARGET_DISH) card.dataset.exposureTarget = 'true';
       card.innerHTML = `
         <div class="menu-item-img">
           ${item.emoji || '🍽️'}
@@ -355,11 +503,17 @@ document.addEventListener('DOMContentLoaded', () => {
       entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
     }, { threshold: 0.1 });
     document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+    // Start exposure tracking now that the target card exists in the DOM.
+    trackExposure();
   }
 
   // ── menu.html: inject menu data if populateMenu exists ──
-  if (typeof populateMenu === 'function') {
-    populateMenu(menuData);
+  // (menu.html calls populateMenu + trackExposure itself, after its own
+  // DOMContentLoaded listener runs — see menu.html's inline script.)
+  if (typeof populateMenu === 'function' && !indexContainer) {
+    // no-op guard kept for pages that may define populateMenu differently;
+    // menu.html drives its own population explicitly.
   }
 
   // ── Apply A/B variant to any dish-desc element ──
