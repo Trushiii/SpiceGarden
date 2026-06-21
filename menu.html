@@ -449,14 +449,16 @@
     .modal-card {
       background: var(--white);
       border-radius: var(--radius-lg);
-      padding: 48px 40px;
-      max-width: 480px;
+      padding: 44px 40px;
+      max-width: 540px;
       width: 100%;
       text-align: center;
       box-shadow: 0 24px 80px rgba(0,0,0,0.35);
       border-top: 5px solid var(--turmeric);
       transform: translateY(20px);
       transition: transform 0.3s ease;
+      max-height: 88vh;
+      overflow-y: auto;
     }
 
     .modal-overlay.open .modal-card {
@@ -471,48 +473,132 @@
       color: var(--charcoal);
     }
 
-    .modal-card p {
+    .modal-card > p {
       color: #777;
       font-size: 0.92rem;
       margin-bottom: 28px;
       line-height: 1.6;
     }
 
-    .likert-wrap {
-      margin-bottom: 32px;
+    /* Survey items (left-aligned, distinct from the centered modal chrome) */
+    .survey-item {
+      text-align: left;
+      margin-bottom: 24px;
     }
 
-    .likert-labels {
+    .survey-item > label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--charcoal);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .scale-row {
       display: flex;
-      justify-content: space-between;
-      font-size: 0.75rem;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .scale-end {
+      font-size: 0.68rem;
       color: #aaa;
-      margin-bottom: 10px;
+      flex-shrink: 0;
+      width: 78px;
+      line-height: 1.3;
     }
 
-    .likert-emojis {
+    .scale-end:last-child { text-align: right; }
+
+    .scale-buttons {
       display: flex;
-      justify-content: space-between;
-      font-size: 1.4rem;
-      margin-bottom: 10px;
+      gap: 6px;
+      flex: 1;
+      justify-content: center;
     }
 
-    input[type="range"] {
-      width: 100%;
-      height: 6px;
-      background: linear-gradient(90deg, var(--saffron), var(--turmeric));
-      border-radius: 3px;
-      outline: none;
-      cursor: pointer;
-    }
-
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 22px;
-      height: 22px;
-      background: var(--saffron);
+    .scale-btn {
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      box-shadow: 0 2px 8px rgba(255,107,53,0.4);
+      border: 1.5px solid #e8e0d8;
+      background: var(--cream);
+      color: #888;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: none;
+      transform: none;
+      padding: 0;
+    }
+
+    .scale-btn:hover {
+      border-color: var(--turmeric);
+      transform: none;
+      box-shadow: none;
+    }
+
+    .scale-btn.selected {
+      background: var(--saffron);
+      border-color: var(--saffron);
+      color: var(--white);
+      box-shadow: 0 4px 12px rgba(255,107,53,0.3);
+    }
+
+    .manip-check > label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--charcoal);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .manip-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .manip-btn {
+      padding: 11px 8px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid #e8e0d8;
+      background: var(--cream);
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #666;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: center;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .manip-btn:hover {
+      border-color: var(--turmeric);
+      color: var(--charcoal);
+      transform: none;
+      box-shadow: none;
+    }
+
+    .manip-btn.selected {
+      background: var(--gold-mist);
+      border-color: var(--turmeric);
+      color: var(--charcoal);
+      font-weight: 600;
+    }
+
+    .survey-note {
+      font-size: 0.72rem;
+      color: #bbb;
+      margin-top: -8px;
+      margin-bottom: 24px;
+      text-align: left;
     }
 
     /* ── Empty state ── */
@@ -536,6 +622,8 @@
     @media (max-width: 600px) {
       .menu-grid { grid-template-columns: 1fr; }
       .cart-notification { right: 16px; bottom: 16px; left: 16px; }
+      .scale-end { display: none; }
+      .manip-options { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -668,21 +756,72 @@
   </div>
 
   <!-- ── Survey Modal ── -->
+  <!-- Triggered by app.js's trackExposure() ~2s after the target dish
+       card has been visible for 3+ continuous seconds — NOT by add-to-
+       cart — so ratings aren't limited to people who already converted. -->
   <div id="survey-modal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-icon">🌶️</div>
-      <h3>How Was Our Menu?</h3>
-      <p>Your feedback helps us craft even better experiences. Rate our menu descriptions from Bland to Fiery!</p>
-      <div class="likert-wrap">
-        <div class="likert-emojis">
-          <span>😐</span><span>🙂</span><span>😊</span><span>😋</span><span>🤩</span>
-        </div>
-        <input type="range" id="likert" min="1" max="5" value="3" />
-        <div class="likert-labels">
-          <span>Needs Work</span>
-          <span>Excellent!</span>
+      <h3>Quick Question</h3>
+      <p>You just saw a description of our Tandoori Butter Chicken. Three quick statements, then one more question — it genuinely helps us write better menus.</p>
+
+      <div class="survey-item" data-scale="appeal-1">
+        <label>This description made the dish sound appealing.</label>
+        <div class="scale-row">
+          <span class="scale-end">Strongly disagree</span>
+          <div class="scale-buttons">
+            <button class="scale-btn" data-value="1" onclick="selectScaleOption(this)">1</button>
+            <button class="scale-btn" data-value="2" onclick="selectScaleOption(this)">2</button>
+            <button class="scale-btn" data-value="3" onclick="selectScaleOption(this)">3</button>
+            <button class="scale-btn" data-value="4" onclick="selectScaleOption(this)">4</button>
+            <button class="scale-btn" data-value="5" onclick="selectScaleOption(this)">5</button>
+          </div>
+          <span class="scale-end">Strongly agree</span>
         </div>
       </div>
+
+      <div class="survey-item" data-scale="appeal-2">
+        <label>This description made me want to order it.</label>
+        <div class="scale-row">
+          <span class="scale-end">Strongly disagree</span>
+          <div class="scale-buttons">
+            <button class="scale-btn" data-value="1" onclick="selectScaleOption(this)">1</button>
+            <button class="scale-btn" data-value="2" onclick="selectScaleOption(this)">2</button>
+            <button class="scale-btn" data-value="3" onclick="selectScaleOption(this)">3</button>
+            <button class="scale-btn" data-value="4" onclick="selectScaleOption(this)">4</button>
+            <button class="scale-btn" data-value="5" onclick="selectScaleOption(this)">5</button>
+          </div>
+          <span class="scale-end">Strongly agree</span>
+        </div>
+      </div>
+
+      <div class="survey-item" data-scale="appeal-3">
+        <label>This description felt authentic and trustworthy.</label>
+        <div class="scale-row">
+          <span class="scale-end">Strongly disagree</span>
+          <div class="scale-buttons">
+            <button class="scale-btn" data-value="1" onclick="selectScaleOption(this)">1</button>
+            <button class="scale-btn" data-value="2" onclick="selectScaleOption(this)">2</button>
+            <button class="scale-btn" data-value="3" onclick="selectScaleOption(this)">3</button>
+            <button class="scale-btn" data-value="4" onclick="selectScaleOption(this)">4</button>
+            <button class="scale-btn" data-value="5" onclick="selectScaleOption(this)">5</button>
+          </div>
+          <span class="scale-end">Strongly agree</span>
+        </div>
+      </div>
+
+      <div class="survey-item manip-check">
+        <label>Which best describes the tone of what you just read?</label>
+        <div class="manip-options">
+          <button class="manip-btn" data-value="sensory" onclick="selectManipOption(this)">🔥 Sensory / indulgent</button>
+          <button class="manip-btn" data-value="health" onclick="selectManipOption(this)">🥗 Health-focused</button>
+          <button class="manip-btn" data-value="heritage" onclick="selectManipOption(this)">🏺 Heritage / tradition</button>
+          <button class="manip-btn" data-value="dont_recall" onclick="selectManipOption(this)">🤷 Don't recall</button>
+        </div>
+      </div>
+
+      <p class="survey-note">Your response is anonymous and used only to improve our menu descriptions.</p>
+
       <button onclick="submitSurvey()" style="width:100%; padding:16px; font-size:1rem;">
         Submit Feedback ✓
       </button>
@@ -692,11 +831,17 @@
   <script src="app.js"></script>
   <script>
     // ── Fallback menu data if app.js doesn't supply it ──
+    // NOTE: the Tandoori Butter Chicken entry intentionally reuses
+    // `selectedDesc` from app.js (the assigned A/B variant) rather than
+    // a hardcoded description. Previously this fallback had its own
+    // 4th, undocumented description — meaning any session that hit this
+    // fallback path silently fell outside the experiment's 3 conditions
+    // while still being logged as if a variant applied. Fixed here.
     const fallbackMenu = [
       { id:1, category:'starters', emoji:'🥗', name:'Spiced Lentil Soup',       desc:'A fragrant blend of red lentils, cumin & fresh coriander, served with warm naan.', price:'LKR 850',  badges:['veg'],          spice:'🌶️'    },
       { id:2, category:'starters', emoji:'🍢', name:'Seekh Kebab Skewers',      desc:'Minced lamb mixed with garam masala, grilled on charcoal & served with mint chutney.', price:'LKR 1,400', badges:['spicy'],       spice:'🌶️🌶️' },
       { id:3, category:'starters', emoji:'🧅', name:'Onion Bhaji Basket',       desc:'Crispy golden onion fritters with green chilli & yoghurt dipping sauce.',  price:'LKR 700',  badges:['veg','new'],    spice:'🌶️'    },
-      { id:4, category:'mains',    emoji:'🍗', name:'Tandoori Butter Chicken',  desc:'Slow-cooked chicken in a velvety tomato-cream sauce, kissed with smoked fenugreek.', price:'LKR 2,200', badges:['chef'],       spice:'🌶️🌶️' },
+      { id:4, category:'mains',    emoji:'🍗', name:TARGET_DISH,                desc:selectedDesc, price:'LKR 2,200', badges:['chef'],       spice:'🌶️🌶️' },
       { id:5, category:'mains',    emoji:'🐑', name:'Rogan Josh',               desc:'Slow-braised lamb shoulder in a deep Kashmiri chilli gravy with whole spices.', price:'LKR 2,600', badges:['spicy'],        spice:'🌶️🌶️🌶️'},
       { id:6, category:'mains',    emoji:'🫘', name:'Dal Makhani',              desc:'Black lentils simmered overnight in butter & cream — the ultimate comfort dish.', price:'LKR 1,500', badges:['veg'],        spice:'🌶️'    },
       { id:7, category:'mains',    emoji:'🦐', name:'Goan Prawn Curry',         desc:'Tiger prawns in a coconut-tamarind gravy with toasted kokum & mustard seeds.', price:'LKR 2,800', badges:['new','spicy'],  spice:'🌶️🌶️' },
@@ -717,9 +862,13 @@
       };
       const badgesHtml = (item.badges || []).map(b => badgeMap[b] || '').join('');
       const spiceHtml  = item.spice ? `<span class="spice-meter">${item.spice}</span>` : '';
+      // Tag the experimentally-manipulated dish so app.js's trackExposure()
+      // can find it via [data-exposure-target="true"], regardless of
+      // which menu array (real or fallback) rendered it.
+      const exposureAttr = item.name === TARGET_DISH ? ' data-exposure-target="true"' : '';
 
       return `
-        <div class="menu-item-card reveal" data-category="${item.category}">
+        <div class="menu-item-card reveal" data-category="${item.category}"${exposureAttr}>
           <div class="menu-item-img">
             ${item.emoji || '🍽️'}
             <div class="item-badges">${badgesHtml}</div>
@@ -758,13 +907,22 @@
       observeReveal();
     }
 
-    // Try to use app.js data, fall back to static data
+    // Try to use app.js data, fall back to static data.
+    // NOTE: addToCart, submitSurvey, selectScaleOption, selectManipOption,
+    // and the survey-modal close-on-overlay-click handler all now live
+    // ONLY in app.js. They used to be redefined here too, which silently
+    // overrode app.js's versions (the later script tag wins) — meaning
+    // this page ran different experiment logic than index.html without
+    // anyone noticing. Removed; this page now calls the shared functions.
     window.addEventListener('DOMContentLoaded', () => {
       if (typeof menuData !== 'undefined' && Array.isArray(menuData)) {
         populateMenu(menuData);
       } else {
         populateMenu(fallbackMenu);
       }
+      // Cards now exist in the DOM — start exposure tracking for whichever
+      // one carries data-exposure-target="true".
+      trackExposure();
     });
 
     // ── Category filter ──
@@ -784,42 +942,6 @@
 
     // ── Diet filter (stub — wire to real logic if needed) ──
     function applyDiet() { /* extend as needed */ }
-
-    // ── Add to cart ──
-    function addToCart(name, btn) {
-      // Flash button green
-      btn.textContent = '✓';
-      btn.classList.add('added');
-      setTimeout(() => { btn.textContent = '+'; btn.classList.remove('added'); }, 1500);
-
-      // Show notification
-      const notif = document.getElementById('notification');
-      document.getElementById('notification-text').textContent =
-        name ? `"${name}" added to your order!` : 'Added to your order!';
-      notif.classList.add('show');
-      clearTimeout(notif._timer);
-      notif._timer = setTimeout(() => notif.classList.remove('show'), 2800);
-    }
-
-    // ── Survey modal ──
-    function showSurvey() {
-      document.getElementById('survey-modal').classList.add('open');
-    }
-
-    function submitSurvey() {
-      const val = document.getElementById('likert').value;
-      document.getElementById('survey-modal').classList.remove('open');
-      const stars = ['😐','🙂','😊','😋','🤩'][val - 1];
-      const notif = document.getElementById('notification');
-      document.getElementById('notification-text').textContent = `Thanks for your ${stars} feedback!`;
-      notif.classList.add('show');
-      setTimeout(() => notif.classList.remove('show'), 3000);
-    }
-
-    // Close modal on overlay click
-    document.getElementById('survey-modal').addEventListener('click', function(e) {
-      if (e.target === this) this.classList.remove('open');
-    });
 
     // ── Scroll reveal ──
     function observeReveal() {
