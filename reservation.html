@@ -348,6 +348,18 @@
     }
 
     .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,107,53,0.45); }
+    .btn-next:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .form-error {
+      display: none;
+      background: #f8d7da;
+      color: #721c24;
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      margin-top: 16px;
+    }
+    .form-error.show { display: block; }
 
     /* ── Success state ── */
     .success-panel {
@@ -693,9 +705,12 @@
               Send me special offers &amp; exclusive menu previews
             </label>
           </div>
+
+          <p class="form-error" id="res-error"></p>
+
           <div class="form-nav">
             <button class="btn-back" onclick="goStep(2)">← Back</button>
-            <button class="btn-next" onclick="submitReservation()">Confirm Booking 🎉</button>
+            <button class="btn-next" id="confirm-btn" onclick="submitReservation()">Confirm Booking 🎉</button>
           </div>
         </div>
 
@@ -846,15 +861,6 @@
           return;
         }
       }
-      // Validate step 3
-      if (n === 4) {
-        const fname = document.getElementById('res-fname').value.trim();
-        const email = document.getElementById('res-email').value.trim();
-        if (!fname || !email) {
-          alert('Please enter your name and email to confirm.');
-          return;
-        }
-      }
 
       for (let i = 1; i <= 3; i++) {
         document.getElementById('panel-' + i).classList.remove('active');
@@ -883,23 +889,87 @@
       btn.classList.add('selected');
     }
 
+    function showReservationError(message) {
+      const el = document.getElementById('res-error');
+      el.textContent = message;
+      el.classList.add('show');
+    }
+
+    function hideReservationError() {
+      document.getElementById('res-error').classList.remove('show');
+    }
+
     // ── Submit reservation ──
-    function submitReservation() {
+    // Previously this only simulated success client-side (a random ref
+    // was generated and shown regardless of whether anything was saved
+    // anywhere). It now actually POSTs to the backend and only shows
+    // success once the server confirms — and shows the server's own
+    // booking reference, not a client-guessed one, so the number a
+    // guest sees always matches a real stored record.
+    async function submitReservation() {
+      hideReservationError();
+
       const fname = document.getElementById('res-fname').value.trim();
+      const lname = document.getElementById('res-lname').value.trim();
       const email = document.getElementById('res-email').value.trim();
-      if (!fname || !email) { alert('Please enter your name and email.'); return; }
+      const phone = document.getElementById('res-phone').value.trim();
 
-      // Generate booking ref
-      const ref = 'SG-' + Math.random().toString(36).substr(2,6).toUpperCase();
-      document.getElementById('booking-ref').textContent = ref;
-
-      // Hide all steps, show success
-      for (let i = 1; i <= 3; i++) {
-        document.getElementById('panel-' + i).classList.remove('active');
-        document.getElementById('step-ind-' + i).classList.add('done');
-        document.getElementById('step-ind-' + i).classList.remove('active');
+      if (!fname || !email) {
+        showReservationError('Please enter your name and email.');
+        return;
       }
-      document.getElementById('panel-success').classList.add('active');
+
+      const payload = {
+        firstName: fname,
+        lastName: lname,
+        email,
+        phone: phone || null,
+        date: document.getElementById('res-date').value,
+        time: document.getElementById('res-time').value,
+        guests: selectedGuests,
+        seating: document.getElementById('res-seating').value,
+        occasion: document.querySelector('.occasion-btn.selected')?.textContent.trim() || null,
+        spicePreference: document.getElementById('res-spice').value,
+        dietary: document.getElementById('res-dietary').value,
+        notes: document.getElementById('res-notes').value.trim() || null,
+        promoOptIn: document.getElementById('res-promo').checked,
+      };
+
+      const btn = document.getElementById('confirm-btn');
+      const originalLabel = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Booking…';
+
+      try {
+        const res = await fetch('/reservation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || 'The server could not save your reservation. Please try again.');
+        }
+
+        document.getElementById('booking-ref').textContent = data.id;
+
+        for (let i = 1; i <= 3; i++) {
+          document.getElementById('panel-' + i).classList.remove('active');
+          document.getElementById('step-ind-' + i).classList.add('done');
+          document.getElementById('step-ind-' + i).classList.remove('active');
+        }
+        document.getElementById('panel-success').classList.add('active');
+      } catch (err) {
+        showReservationError(
+          err.message.includes('fetch') || err.name === 'TypeError'
+            ? "Couldn't reach the server. Please check your connection and try again, or call us at +94 11 234 5678."
+            : err.message
+        );
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+      }
     }
 
     // ── Reset form ──
@@ -909,6 +979,13 @@
       document.getElementById('panel-1').classList.add('active');
       document.getElementById('step-ind-1').classList.add('active');
       document.getElementById('step-ind-1').classList.remove('done');
+      hideReservationError();
+      document.getElementById('res-fname').value = '';
+      document.getElementById('res-lname').value = '';
+      document.getElementById('res-email').value = '';
+      document.getElementById('res-phone').value = '';
+      document.getElementById('res-notes').value = '';
+      document.querySelectorAll('.occasion-btn').forEach(b => b.classList.remove('selected'));
     }
   </script>
 </body>
