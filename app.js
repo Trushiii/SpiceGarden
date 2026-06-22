@@ -56,11 +56,21 @@ const variants = [
 // value instead of separately hardcoded strings that can drift apart.
 const TARGET_DISH = 'Tandoori Butter Chicken';
 
+// ── Research consent / opt-out ───────────────────────────────
+// Single source of truth checked by getAnonId(), variant assignment,
+// logEvent(), and trackExposure() — opting out stops all of them rather
+// than relying on scattered checks that are easy to miss when this file
+// is edited later.
+function isOptedOut() {
+  return localStorage.getItem('sg_research_optout') === '1';
+}
+
 // ── Persistent anonymous visitor ID ──────────────────────────
 // Survives across sessions (unlike sessionStorage) so the same person
 // returning later is recognized as one unit of observation, not
 // double-counted as a fresh participant. No PII is ever stored here.
 function getAnonId() {
+  if (isOptedOut()) return null;
   let id = localStorage.getItem('sg_anon_id');
   if (!id) {
     id = (window.crypto && typeof crypto.randomUUID === 'function')
@@ -77,6 +87,11 @@ const anonId = getAnonId();
 // different framing on a later visit, contaminating the between-subjects
 // design with within-subject repeats.
 const variantIndex = (() => {
+  if (isOptedOut()) {
+    // Page still needs *some* description to render, but we don't
+    // persist or log which one — nothing here is recoverable as data.
+    return Math.floor(Math.random() * variants.length);
+  }
   let idx = localStorage.getItem('sg_variant');
   if (idx === null) {
     idx = Math.floor(Math.random() * variants.length);
@@ -247,6 +262,8 @@ function getSessionId() {
 
 // ── Generic server event logger ──────────────────────────────
 function logEvent(action, data = {}) {
+  if (isOptedOut()) return; // research data collection disabled for this browser
+
   const payload = { action, ...data, sessionId: getSessionId(), anonId, ts: new Date().toISOString() };
 
   const endpoint = action === 'contact_form' ? '/save-contact'
@@ -275,6 +292,8 @@ const MIN_DWELL_MS    = 3000;
 const SURVEY_DELAY_MS = 2000;
 
 function trackExposure() {
+  if (isOptedOut()) return; // don't track, and don't schedule the survey, for opted-out users
+
   const el = document.querySelector('[data-exposure-target="true"]');
   if (!el) return; // target card not on this page / not yet rendered
 
@@ -358,6 +377,140 @@ function addToCart(dishName, btnEl) {
 function addToCartLegacy() {
   showToast('Added to your order!');
   logEvent('add_to_cart', { variant: selectedDesc, variantIndex });
+}
+
+// ── Research consent banner ───────────────────────────────────
+// Injected dynamically (not static HTML in each page) for the same
+// reason the experiment logic itself is centralized here: one source
+// of truth that's automatically present on every page that loads
+// app.js, with no risk of a page falling out of sync with the others.
+function injectConsentStyles() {
+  if (document.getElementById('sg-consent-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'sg-consent-styles';
+  style.textContent = `
+    #consent-banner {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 9998;
+      background: #1A1A1A; color: rgba(255,255,255,0.82);
+      padding: 16px 24px; display: flex; align-items: center; gap: 20px;
+      flex-wrap: wrap; justify-content: space-between;
+      border-top: 3px solid #FF6B35; font-size: 0.85rem;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.25);
+      transform: translateY(0); transition: transform 0.3s ease;
+    }
+    #consent-banner.hidden { transform: translateY(120%); }
+    #consent-banner p { margin: 0; max-width: 680px; line-height: 1.5; color: rgba(255,255,255,0.78); }
+    #consent-banner a { color: #F4A726; text-decoration: underline; cursor: pointer; }
+    .consent-actions { display: flex; gap: 10px; flex-shrink: 0; }
+    .consent-actions button {
+      font-size: 0.82rem; font-weight: 600; padding: 9px 18px;
+      border-radius: 50px; cursor: pointer; border: none;
+      box-shadow: none; transition: all 0.2s ease;
+    }
+    .consent-accept { background: #FF6B35; color: #fff; }
+    .consent-accept:hover { background: #C0392B; transform: none; box-shadow: none; }
+    .consent-decline { background: transparent; color: rgba(255,255,255,0.6); border: 1.5px solid rgba(255,255,255,0.25); }
+    .consent-decline:hover { color: #fff; border-color: rgba(255,255,255,0.5); transform: none; box-shadow: none; }
+    #consent-modal .modal-card { text-align: left; }
+    #consent-modal h3 { text-align: center; margin-bottom: 16px; }
+    #consent-modal p { font-size: 0.88rem; color: #666; line-height: 1.65; margin-bottom: 14px; }
+    #consent-modal ul { margin: 0 0 14px 0; padding-left: 20px; font-size: 0.88rem; color: #666; line-height: 1.65; }
+    @media (max-width: 640px) {
+      #consent-banner { flex-direction: column; align-items: stretch; text-align: left; }
+      .consent-actions { justify-content: flex-end; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function injectConsentBanner() {
+  if (document.getElementById('consent-banner')) return; // already injected on this page load
+  injectConsentStyles();
+
+  const banner = document.createElement('div');
+  banner.id = 'consent-banner';
+  banner.innerHTML = `
+    <p>
+      We collect anonymous interaction data (no name, email, or contact details) to
+      study what makes menu descriptions effective. De-identified results may be
+      used in research.
+      <a onclick="showConsentDetails(); return false;" href="#">Learn more</a>
+    </p>
+    <div class="consent-actions">
+      <button type="button" class="consent-decline" onclick="optOutOfResearch()">Opt out</button>
+      <button type="button" class="consent-accept" onclick="dismissConsentBanner()">Got it</button>
+    </div>`;
+  document.body.appendChild(banner);
+
+  const modal = document.createElement('div');
+  modal.id = 'consent-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-card">
+      <h3>About This Data</h3>
+      <p><strong>What we collect:</strong> which version of a dish description you
+      see, whether you add items to your order, and (optionally) survey ratings —
+      tied only to a random ID stored in your browser.</p>
+      <ul>
+        <li>We never collect your name, email, or phone through this tracking,
+        even if you separately submit a reservation or contact form — those go
+        through a completely separate process.</li>
+        <li>Results may be analyzed and published in de-identified form for
+        research on menu copywriting.</li>
+        <li>Opting out stops all future collection on this device immediately,
+        and won't affect your ability to browse, order, or book a table.</li>
+        <li>Because this data isn't linked to your identity, we have no way to
+        find and delete specific past entries after the fact — opting out
+        prevents new data, not retroactive removal.</li>
+      </ul>
+      <button onclick="hideConsentDetails()" style="width:100%;">Close</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+}
+
+function initConsentBanner() {
+  if (isOptedOut() || localStorage.getItem('sg_consent_ack') === '1') return;
+  injectConsentBanner();
+}
+
+function dismissConsentBanner() {
+  localStorage.setItem('sg_consent_ack', '1');
+  const banner = document.getElementById('consent-banner');
+  if (banner) banner.classList.add('hidden');
+}
+
+function showConsentDetails() {
+  const modal = document.getElementById('consent-modal');
+  if (modal) modal.classList.add('open');
+}
+
+function hideConsentDetails() {
+  const modal = document.getElementById('consent-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+// Opting out doesn't just hide the banner — it wipes every piece of
+// locally-stored research/experiment state (anon ID, variant
+// assignment, conversion/survey flags) and sets a flag that getAnonId(),
+// variant assignment, logEvent(), and trackExposure() all check, so
+// nothing further is collected or persisted for this browser.
+function optOutOfResearch() {
+  ['sg_anon_id', 'sg_variant', 'sg_survey_completed', 'sg_survey_scheduled',
+   'sg_converted_target', 'sg_event_log', 'sg_consent_ack']
+    .forEach(k => localStorage.removeItem(k));
+  ['sg_exposed_at', 'sg_survey_scheduled', 'sg_session_id']
+    .forEach(k => sessionStorage.removeItem(k));
+
+  localStorage.setItem('sg_research_optout', '1');
+
+  hideConsentDetails();
+  const banner = document.getElementById('consent-banner');
+  if (banner) banner.classList.add('hidden');
+
+  showToast("You're opted out — no research data will be collected on this device.");
 }
 
 // ── Survey: scale + manipulation-check button selection ──────
@@ -527,6 +680,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target === this) this.classList.remove('open');
     });
   }
+
+  // ── Consent banner (injects itself + its detail modal if not yet shown/declined) ──
+  initConsentBanner();
 
   // ── Init cart badge ──
   cart._updateBadge();
